@@ -254,9 +254,6 @@ public class CameraFragment extends Fragment {
             videoSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
             mRotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
 
-            // stabilization
-            int[] availableModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
-
             // set ImageReader
             reader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.JPEG, 1);
             reader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
@@ -324,7 +321,6 @@ public class CameraFragment extends Fragment {
             Surface previewSurface = new Surface(previewTexture);
             Surface recorderSurface = recorder.getSurface();
             previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            previewRequestBuilder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON);
             previewRequestBuilder.addTarget(previewSurface);
             previewRequestBuilder.addTarget(recorderSurface);
             cameraDevice.createCaptureSession(Arrays.asList(previewSurface, recorderSurface), new CameraCaptureSession.StateCallback() {
