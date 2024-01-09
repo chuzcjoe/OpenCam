@@ -59,7 +59,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CameraFragment extends Fragment {
 
@@ -104,6 +106,16 @@ public class CameraFragment extends Fragment {
     private String mVideoFileName;
     
     private int mRotation;
+
+    private ArrayList<String> mAvailableStabilizationModes = new ArrayList<>();
+
+    private static final Map<Integer, String> stabilityMap = new HashMap<>();
+
+    static {
+        stabilityMap.put(0, "OFF");
+        stabilityMap.put(1, "ON");
+        stabilityMap.put(2, "PREVIEW_STABILIZATION");
+    }
 
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -260,6 +272,11 @@ public class CameraFragment extends Fragment {
             mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height);
             mRotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
 
+            // check available stabilization modes
+            int[] stabilizationModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
+            for (int mode : stabilizationModes) {
+                mAvailableStabilizationModes.add(stabilityMap.get(mode));
+            }
             // set ImageReader
             mImageReader = ImageReader.newInstance(mImageSize.getWidth(), mImageSize.getHeight(), ImageFormat.JPEG, 1);
             mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
@@ -348,6 +365,7 @@ public class CameraFragment extends Fragment {
             previewTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             Surface previewSurface = new Surface(previewTexture);
             previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewRequestBuilder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION);
             previewRequestBuilder.addTarget(previewSurface);
             cameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
