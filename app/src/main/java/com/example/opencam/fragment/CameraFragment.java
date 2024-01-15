@@ -4,7 +4,6 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Camera;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -12,15 +11,12 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaRecorder;
-import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -29,7 +25,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.fragment.app.Fragment;
 
 import android.os.Handler;
@@ -44,9 +39,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.example.opencam.ImageSaver;
@@ -59,23 +52,17 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class CameraFragment extends Fragment {
 
     public static final String TAG = "OpenCam";
-    public static final int REQUEST_PERMISSION = 100;
     public static final int STATE_PREVIEW = 0;
     public static final int STATE_WAIT_LOCK = 1;
     private int mCaptureState = STATE_PREVIEW;
     FragmentCameraBinding cameraBinding;
-    boolean allPermissionGranted = true;
     private static final String[] PERMISSIONS = new String[]{
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
@@ -502,7 +489,6 @@ public class CameraFragment extends Fragment {
     {
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        int DSI_height = displayMetrics.heightPixels;
         int DSI_width = displayMetrics.widthPixels;
 
         int newWidth = DSI_width;
