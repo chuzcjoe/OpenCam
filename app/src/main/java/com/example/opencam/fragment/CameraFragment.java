@@ -29,11 +29,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.fragment.app.Fragment;
 
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -43,12 +45,14 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.example.opencam.ImageSaver;
 import com.example.opencam.R;
 import com.example.opencam.databinding.FragmentCameraBinding;
+import com.example.opencam.utils.CameraUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -85,6 +89,7 @@ public class CameraFragment extends Fragment {
     protected CaptureRequest.Builder previewRequestBuilder;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
+    private boolean mEnableStabilization = false;
 
     private File mImageFile;
     private File mImageFolder;
@@ -267,16 +272,19 @@ public class CameraFragment extends Fragment {
             cameraId = cameraManager.getCameraIdList()[0];
             CameraCharacteristics chars = cameraManager.getCameraCharacteristics(cameraId);
             StreamConfigurationMap map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
-            mVideoSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
-            mImageSize = chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height);
+            mPreviewSize = CameraUtils.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+            mVideoSize = CameraUtils.chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), width, height);
+            mImageSize = CameraUtils.chooseOptimalSize(map.getOutputSizes(ImageFormat.JPEG), width, height);
             mRotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
+
+            // setAspectRatioTextureView(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
             // check available stabilization modes
             int[] stabilizationModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
             for (int mode : stabilizationModes) {
                 mAvailableStabilizationModes.add(stabilityMap.get(mode));
             }
+            int[] opticalStabilizationModes = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION);
             // set ImageReader
             mImageReader = ImageReader.newInstance(mImageSize.getWidth(), mImageSize.getHeight(), ImageFormat.JPEG, 1);
             mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
@@ -365,7 +373,6 @@ public class CameraFragment extends Fragment {
             previewTexture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             Surface previewSurface = new Surface(previewTexture);
             previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            previewRequestBuilder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION);
             previewRequestBuilder.addTarget(previewSurface);
             cameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
@@ -415,21 +422,6 @@ public class CameraFragment extends Fragment {
         }
     };
 
-    private static Size chooseOptimalSize(Size[] choices, int width, int height) {
-        List<Size> bigEnough = new ArrayList<Size>();
-        for (Size option : choices) {
-            if (option.getHeight() == option.getWidth() * height / width &&
-                option.getHeight() >= height && option.getWidth() >= width) {
-                bigEnough.add(option);
-            }
-        }
-        if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, new CompareSizeByArea());
-        } else {
-            return choices[0];
-        }
-    }
-
     private void createImageFolder() {
         mImageFolder = getActivity().getExternalFilesDir("IMG");
         if (!mImageFolder.exists()) {
@@ -460,15 +452,39 @@ public class CameraFragment extends Fragment {
         return videoFile;
     }
 
+    private void setAspectRatioTextureView(int ResolutionWidth , int ResolutionHeight )
+    {
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        int DSI_height = displayMetrics.heightPixels;
+        int DSI_width = displayMetrics.widthPixels;
+
+        int newWidth = DSI_width;
+        int newHeight;
+        if (ResolutionWidth > ResolutionHeight){
+            newHeight = ((DSI_width * ResolutionWidth) / ResolutionHeight);
+
+        }else {
+            newHeight = ((DSI_width * ResolutionHeight) / ResolutionWidth);
+        }
+        updateTextureViewSize(newWidth,newHeight);
+
+    }
+
+    private void updateTextureViewSize(int viewWidth, int viewHeight) {
+        Log.d(TAG, "TextureView Width : " + viewWidth + " TextureView Height : " + viewHeight);
+        cameraBinding.texture.setLayoutParams(new FrameLayout.LayoutParams(viewWidth, viewHeight));
+    }
+
     private void setupMediaRecorder() throws IOException {
         recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         recorder.setOutputFile(mVideoFileName);
-        recorder.setVideoEncodingBitRate(1000000);
+        recorder.setVideoEncodingBitRate(10000000);
         recorder.setVideoFrameRate(30);
         recorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
-        recorder.setOrientationHint(mRotation);
+        recorder.setOrientationHint(ORIENTATIONS.get(mRotation));
         recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         recorder.prepare();
@@ -504,13 +520,7 @@ public class CameraFragment extends Fragment {
         }
     }
 
-    static class CompareSizeByArea implements Comparator<Size> {
-        @Override
-        public int compare(Size s1, Size s2) {
-            return Long.signum((long) s1.getWidth() * s1.getHeight() -
-                    (long) s2.getWidth() * s2.getHeight());
-        }
-    }
+
 
     @Override
     public void onPause() {
