@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.view.View;
 
 import com.example.opencam.databinding.ActivityMainBinding;
-import com.example.opencam.fragment.BlankFragment;
 import com.example.opencam.fragment.CameraFragment;
 
 

@@ -11,7 +11,24 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="0.06"
-        android:background="@color/black">
+        android:background="@color/black"
+        android:gravity="end">
+
+        <ImageButton
+            android:id="@+id/btnFlash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/baseline_flashlight_off_24"
+            android:layout_gravity="center_vertical"
+            />
+
+        <ImageButton
+            android:id="@+id/btnSetting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/baseline_settings_24"
+            android:layout_gravity="center_vertical"
+            />
 
     </LinearLayout>
 
@@ -40,17 +57,19 @@
         <ImageButton
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/btnTake"
-            android:background="@drawable/capture_button"
+            android:id="@+id/btnSwitch"
+            android:background="@drawable/baseline_video_camera_back_24"
             android:layout_gravity="center"
-            android:layout_margin="10dp"
+            android:scaleY="0.5"
+            android:scaleX="0.5"
+            android:layout_margin="5dp"
             />
 
         <ImageButton
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/btnVideo"
-            android:background="@drawable/video_default"
+            android:id="@+id/btnCapture"
+            android:background="@drawable/baseline_camera_alt_24"
             android:layout_margin="10dp"
             />
 

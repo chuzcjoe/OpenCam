@@ -112,6 +112,8 @@ public class CameraFragment extends Fragment {
     
     private int mRotation;
 
+    private boolean mFlashState = false;
+
     private ArrayList<String> mAvailableStabilizationModes = new ArrayList<>();
 
     private static final Map<Integer, String> stabilityMap = new HashMap<>();
@@ -128,6 +130,10 @@ public class CameraFragment extends Fragment {
         ORIENTATIONS.append(Surface.ROTATION_180, 270);
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
+
+    private static final int PICTURE = 1;
+    private static final int RECORD = 2;
+    private int CAMERA_STATUS = PICTURE;
 
     private CameraDevice.StateCallback mOpenCameraStateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -204,36 +210,68 @@ public class CameraFragment extends Fragment {
         recorder = new MediaRecorder();
 
         cameraBinding.texture.setSurfaceTextureListener(textureListener);
-        cameraBinding.btnTake.setOnClickListener(new View.OnClickListener() {
+        cameraBinding.btnSwitch.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                lockFocus();
+                if (CAMERA_STATUS == PICTURE) {
+                    cameraBinding.btnSwitch.setBackgroundResource(R.drawable.baseline_camera_alt_24);
+                    cameraBinding.btnCapture.setBackgroundResource(R.drawable.baseline_video_camera_back_24);
+                    CAMERA_STATUS = RECORD;
+                } else if (CAMERA_STATUS == RECORD) {
+                    cameraBinding.btnSwitch.setBackgroundResource(R.drawable.baseline_video_camera_back_24);
+                    cameraBinding.btnCapture.setBackgroundResource(R.drawable.baseline_camera_alt_24);
+                    CAMERA_STATUS = PICTURE;
+                } else {
+                    return;
+                }
             }
         });
-        cameraBinding.btnVideo.setOnClickListener(new View.OnClickListener() {
+        cameraBinding.btnCapture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (isRecording) {
-                    cameraBinding.btnVideo.setImageDrawable(ContextCompat.getDrawable(getContext(), R.drawable.video_default));
-                    recorder.stop();
-                    recorder.reset();
-                    startPreview();
-                    cameraBinding.meter.stop();
-                    cameraBinding.meter.setVisibility(View.INVISIBLE);
-                } else {
-                    cameraBinding.btnVideo.setImageDrawable(ContextCompat.getDrawable(getContext(), R.drawable.video_recording));
-                    try {
-                        createVideoFileName();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
+                if (CAMERA_STATUS == RECORD) {
+                    if (isRecording) {
+                        recorder.stop();
+                        recorder.reset();
+                        startPreview();
+                        cameraBinding.meter.stop();
+                        cameraBinding.meter.setVisibility(View.INVISIBLE);
+                    } else {
+                        try {
+                            createVideoFileName();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        startRecord();
+                        recorder.start();
+                        cameraBinding.meter.setBase(SystemClock.elapsedRealtime());
+                        cameraBinding.meter.setVisibility(View.VISIBLE);
+                        cameraBinding.meter.start();
                     }
-                    startRecord();
-                    recorder.start();
-                    cameraBinding.meter.setBase(SystemClock.elapsedRealtime());
-                    cameraBinding.meter.setVisibility(View.VISIBLE);
-                    cameraBinding.meter.start();
+                    isRecording = !isRecording;
+                } else {
+                    lockFocus();
                 }
-                isRecording = !isRecording;
+
+            }
+        });
+        cameraBinding.btnSetting.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+            }
+        });
+        cameraBinding.btnFlash.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mFlashState = !mFlashState;
+                if (mFlashState) {
+                    previewRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH);
+                    cameraBinding.btnFlash.setImageDrawable(ContextCompat.getDrawable(getContext(), R.drawable.baseline_flashlight_on_24));
+                } else {
+                    previewRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
+                    cameraBinding.btnFlash.setImageDrawable(ContextCompat.getDrawable(getContext(), R.drawable.baseline_flashlight_off_24));
+                }
+                updatePreview();
             }
         });
     }
@@ -397,6 +435,14 @@ public class CameraFragment extends Fragment {
             }, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void updatePreview() {
+        try {
+            mPreviewCaptureSession.setRepeatingRequest(previewRequestBuilder.build(), null, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            throw new RuntimeException(e);
         }
     }
 
